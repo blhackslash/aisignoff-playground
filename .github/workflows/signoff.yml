@@ -1,0 +1,64 @@
+# aisignoff check, from examples/workflows/signoff-lint.yml of aisignoff, with the pull request
+# description check switched on (this repository uses [history]).
+#
+#   - fails when a file or line has no valid declaration (aisignoff lint)
+#   - in a pull request into main: fails when its description doesn't declare its lines
+#   - writes the level mix of each folder to the job summary, uploads the folder report as an artifact
+#
+# Require the "aisignoff / lint" check in the branch protection of main.
+name: aisignoff
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]   # again when the description is edited
+  merge_group:   # with a merge queue: checks the commit that will land (aisignoff >= 0.12)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AISIGNOFF_VERSION: "0.14.0"   # pin a release, so a new version can't break your CI unannounced
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history, for line-by-line declarations ([history])
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "aisignoff==${AISIGNOFF_VERSION}"
+      - name: Summary and folder report
+        run: |
+          {
+            echo '### AI signoff'
+            aisignoff report --tree --markdown --depth 3 || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          # outside the work tree, or lint would count the report as an undeclared file; with the text
+          # of each file, and in a pull request the lines it changes (aisignoff >= 0.7): since the
+          # first parent of the merge preview, the base branch as this run merged it
+          SINCE=""
+          if [ "${{ github.event_name }}" = pull_request ]; then SINCE=HEAD^1; fi
+          aisignoff report --html "$RUNNER_TEMP/aisignoff-report.html" --with-source ${SINCE:+--since "$SINCE"} || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aisignoff-report
+          path: ${{ runner.temp }}/aisignoff-report.html
+      - name: Check declarations
+        run: aisignoff lint
+        # run: aisignoff lint --strict   # also fail on warnings, such as annotations that match no file
+      # With [history]: a pull request's own lines are declared by its description, which lands as
+      # the message of its merge or squash commit. This checks it before the merge (aisignoff >= 0.12).
+      - name: Check the pull request's declaration
+        if: github.event_name == 'pull_request'
+        env:
+          DESCRIPTION: ${{ github.event.pull_request.body }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          printf '%s\n' "$DESCRIPTION" > "$RUNNER_TEMP/description.md"
+          aisignoff lint --declare-from "$RUNNER_TEMP/description.md" --author "$AUTHOR" --base HEAD^1
