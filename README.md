@@ -1,5 +1,15 @@
 # aisignoff playground
 
+Files and lines ([folder report](https://blhackslash.github.io/aisignoff-playground/)):
+[![AI generation (files)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blhackslash/aisignoff-playground/badges/aisignoff-generation.json)](https://blhackslash.github.io/aisignoff-playground/)
+[![Human review (files)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blhackslash/aisignoff-playground/badges/aisignoff-human-review.json)](https://blhackslash.github.io/aisignoff-playground/)
+[![AI review (files)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blhackslash/aisignoff-playground/badges/aisignoff-ai-review.json)](https://blhackslash.github.io/aisignoff-playground/)
+
+Merged pull requests:
+[![AI generation](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blhackslash/aisignoff-playground/badges/ai-generation.json)](https://github.com/industrial-mathematics-group/.github/blob/main/.github/CONTRIBUTING.md#g-generation)
+[![Human review](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blhackslash/aisignoff-playground/badges/ai-human-review.json)](https://github.com/industrial-mathematics-group/.github/blob/main/.github/CONTRIBUTING.md#h-human-review)
+[![AI review](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/blhackslash/aisignoff-playground/badges/ai-review.json)](https://github.com/industrial-mathematics-group/.github/blob/main/.github/CONTRIBUTING.md#a-ai-review)
+
 A throwaway repository for trying [aisignoff](https://github.com/industrial-mathematics-group/aisignoff) on GitHub: a small dummy Python package, results and a script, declared with the setup the aisignoff docs recommend.
 
 ## What's in it
@@ -15,10 +25,13 @@ A throwaway repository for trying [aisignoff](https://github.com/industrial-math
 
 | File | What it does |
 |---|---|
-| `.github/workflows/signoff.yml` | `aisignoff lint` on pushes to main, pull requests and merge queues, plus the pull request description check; folder tree in the job summary, folder report as an artifact. Installs `aisignoff==0.14.0` from PyPI |
+| `.github/workflows/signoff.yml`, job `lint` | `aisignoff lint` on pushes to main, pull requests and merge queues, plus the pull request description check; folder tree in the job summary, folder report as an artifact. Installs `aisignoff==0.14.0` from PyPI |
 | `.github/workflows/pr-signoff.yml` | The organisation's PR-signoff check: validates the ticked template, sets `ai:G*` / `human:H*` / `ai-review:A*` labels |
 | `.github/pull_request_template.md` | The organisation's template, with the responsibility, model and review-level boxes |
-| `extras/workflows/` | Optional workflows to copy into `.github/workflows/`: the PR diff and PR files summaries, the organisation's File-signoff and Signoff-Badges callers |
+| `.github/workflows/signoff.yml`, job `badges` | On pushes to main: `aisignoff badge` writes the three file badges (top row above) and commits them to the `badges` branch |
+| `.github/workflows/signoff-badges.yml` | The organisation's Signoff-Badges workflow: badges of the declarations of merged pull requests (second row), on the same `badges` branch |
+| `.github/workflows/signoff-pages.yml` | On pushes to main: publishes the interactive folder report, with the text of each file, to GitHub Pages |
+| `extras/workflows/` | Optional workflows to copy into `.github/workflows/`: the PR diff and PR files summaries, the organisation's File-signoff caller |
 
 ## Setup on GitHub
 
@@ -26,6 +39,8 @@ A throwaway repository for trying [aisignoff](https://github.com/industrial-math
 2. *Settings → General → Pull Requests*: allow merge commits (and squash, for scenario 5), and set the default commit message of both to **Pull request title and description**. Without this the declaration never reaches git.
 3. *Settings → Rules → Rulesets* (or *Branches*), for `main`: require a pull request, and require the checks **`aisignoff / lint`** and **`pr-signoff / check`**. Leave direct pushes allowed for yourself if you want to try scenario 1 after this.
 4. Check the first run under *Actions*: `aisignoff / lint` should be green, and its summary should show the folder tree.
+5. *Settings → Pages → Build and deployment → Source*: **GitHub Actions**. The report is then at <https://blhackslash.github.io/aisignoff-playground/> after the next push to main (or *Actions → aisignoff report on Pages → Run workflow*).
+6. The badges branch is created by the first push to main after this. The pull request badges show "no declarations yet" until a declared pull request is merged. Don't protect `badges` against pushes by github-actions[bot].
 
 Locally: `pipx install aisignoff==0.14.0`, then `aisignoff lint`, `aisignoff report --files` (with `[history]`, files with mixed lines show the share of each declaration), `aisignoff diff HEAD^1 --files` (the levels of the lines a commit added) and `aisignoff report --json` (every line run with its source).
 
@@ -91,4 +106,4 @@ Turn on the merge queue in the ruleset. **Expect:** the `merge_group` run says i
 
 ## Updating aisignoff
 
-The version is pinned in `AISIGNOFF_VERSION` in `.github/workflows/signoff.yml`. Raise it there, in `extras/workflows/`, and in your local install together: a snapshot written by another version than CI's can fail the check.
+The version is pinned in `AISIGNOFF_VERSION` in `.github/workflows/signoff.yml`. Raise it in `signoff.yml`, `signoff-pages.yml` and `extras/workflows/`, and in your local install together: a snapshot written by another version than CI's can fail the check.
